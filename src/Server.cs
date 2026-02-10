@@ -6,6 +6,14 @@ using codecrafters_http_server.src;
 const int Port = 4221;
 const int BufferSize = 1024;
 
+string? filesDirectory = null;
+for (var i = 0; i < args.Length - 1; i++)
+  if (args[i] == "--directory")
+    filesDirectory = args[++i];
+
+if (filesDirectory != null)
+  ResponseParser.FilesDirectory = filesDirectory;
+
 var server = new TcpListener(IPAddress.Any, Port);
 server.Start();
 
