@@ -9,7 +9,7 @@ public static class UserAgentHandler
   public static HttpResponse Handle(HttpRequest request)
   {
     var userAgent = request.HttpHeaders.GetValues("User-Agent").FirstOrDefault() ?? "";
-    var headers = ResponseHelper.CreateContentHeaders(userAgent, "text/plain");
+    var headers = ResponseHelper.CreateContentHeaders(userAgent, "text/plain", request.HttpHeaders, null);
     return new HttpResponse(request.HttpVersion, headers, userAgent, HttpStatusCode.OK);
   }
 }

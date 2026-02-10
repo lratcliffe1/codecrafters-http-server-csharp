@@ -44,8 +44,8 @@ public static class FileHandler
 
       const string contentType = "application/octet-stream";
       var headers = bodyBytes != null
-        ? ResponseHelper.CreateContentHeaders(bodyBytes, contentType, contentEncoding)
-        : ResponseHelper.CreateContentHeaders(fileContent, contentType, contentEncoding);
+        ? ResponseHelper.CreateContentHeaders(bodyBytes, contentType, request.HttpHeaders, contentEncoding)
+        : ResponseHelper.CreateContentHeaders(fileContent, contentType, request.HttpHeaders, contentEncoding);
 
       return bodyBytes != null
         ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)

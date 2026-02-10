@@ -48,6 +48,7 @@ static void HandleClient(TcpClient client)
     int bytesRead;
     while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) != 0)
     {
+      HttpRequest? httpRequest = null;
       requestBuilder.Append(Encoding.ASCII.GetString(buffer, 0, bytesRead));
 
       while (true)
@@ -60,7 +61,7 @@ static void HandleClient(TcpClient client)
         var requestData = data[..requestLength];
         try
         {
-          var httpRequest = new HttpRequest(requestData);
+          httpRequest = new HttpRequest(requestData);
           var responseBytes = ResponseParser.Parse(httpRequest).ToResponseBytes();
 
           stream.Write(responseBytes, 0, responseBytes.Length);
@@ -82,6 +83,9 @@ static void HandleClient(TcpClient client)
 
         requestBuilder.Remove(0, requestLength);
       }
+
+      if (httpRequest == null || (httpRequest.HttpHeaders.TryGetValues("Connection", out var connectionValues) == true && connectionValues?.Contains("close") == true))
+        break;
     }
   }
   catch (Exception ex)

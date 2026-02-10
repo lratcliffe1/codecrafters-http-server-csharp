@@ -15,8 +15,8 @@ public static class EchoHandler
     var (bodyBytes, contentEncoding) = ResponseHelper.TryCompressIfAccepted(body, request.HttpHeaders);
 
     var headers = bodyBytes != null
-      ? ResponseHelper.CreateContentHeaders(bodyBytes, ContentType, contentEncoding)
-      : ResponseHelper.CreateContentHeaders(body, ContentType, contentEncoding);
+      ? ResponseHelper.CreateContentHeaders(bodyBytes, ContentType, request.HttpHeaders, contentEncoding)
+      : ResponseHelper.CreateContentHeaders(body, ContentType, request.HttpHeaders, contentEncoding);
 
     return bodyBytes != null
       ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)

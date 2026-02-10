@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -8,26 +9,45 @@ public static class ResponseHelper
 {
   private const string GzipEncoding = "gzip";
 
-  public static HttpContentHeaders CreateContentHeaders(string body, string contentType, string? contentEncoding = null)
+  public static HttpHeaders CreateContentHeaders(string body, string contentType, HttpHeaders requestHeaders, string? contentEncoding = null)
   {
     var contentLength = Encoding.UTF8.GetByteCount(body);
-    return CreateContentHeaders(contentLength, contentType, contentEncoding);
+    return CreateContentHeaders(contentLength, contentType, requestHeaders, contentEncoding);
   }
 
-  public static HttpContentHeaders CreateContentHeaders(byte[] bodyBytes, string contentType, string? contentEncoding = null)
+  public static HttpHeaders CreateContentHeaders(byte[] bodyBytes, string contentType, HttpHeaders requestHeaders, string? contentEncoding = null)
   {
-    return CreateContentHeaders(bodyBytes.Length, contentType, contentEncoding);
+    return CreateContentHeaders(bodyBytes.Length, contentType, requestHeaders, contentEncoding);
   }
 
-  private static HttpContentHeaders CreateContentHeaders(int contentLength, string contentType, string? contentEncoding)
+  private static HttpHeaders CreateContentHeaders(int contentLength, string contentType, HttpHeaders requestHeaders, string? contentEncoding = null)
   {
-    var headers = new ByteArrayContent([]).Headers;
-    headers.Clear();
-    headers.Add("Content-Type", contentType);
-    headers.Add("Content-Length", contentLength.ToString());
-    if (contentEncoding != null)
-      headers.Add("Content-Encoding", contentEncoding);
-    return headers;
+    var contentHeaders = new ByteArrayContent([]).Headers;
+    contentHeaders.Clear();
+    contentHeaders.Add("Content-Type", contentType);
+    contentHeaders.Add("Content-Length", contentLength.ToString());
+
+    if (!string.IsNullOrEmpty(contentEncoding))
+      contentHeaders.Add("Content-Encoding", contentEncoding);
+
+    var responseHeaders = new HttpResponseMessage().Headers;
+    if (requestHeaders.TryGetValues("Connection", out var connectionValues))
+      responseHeaders.TryAddWithoutValidation("Connection", connectionValues);
+
+    return new CombinedHeadersWrapper(contentHeaders, responseHeaders);
+  }
+
+  private class CombinedHeadersWrapper : HttpHeaders, IEnumerable<KeyValuePair<string, IEnumerable<string>>>
+  {
+    private readonly List<KeyValuePair<string, IEnumerable<string>>> _headers;
+
+    public CombinedHeadersWrapper(HttpContentHeaders contentHeaders, HttpResponseHeaders responseHeaders)
+    {
+      _headers = [.. contentHeaders, .. responseHeaders];
+    }
+
+    IEnumerator<KeyValuePair<string, IEnumerable<string>>> IEnumerable<KeyValuePair<string, IEnumerable<string>>>.GetEnumerator() => _headers.GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _headers.GetEnumerator();
   }
 
   public static (byte[]? bodyBytes, string? contentEncoding) TryCompressIfAccepted(string content, HttpHeaders requestHeaders)
