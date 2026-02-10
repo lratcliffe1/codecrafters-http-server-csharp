@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace codecrafters_http_server.src;
+namespace codecrafters_http_server.src.Models;
 
 public class HttpResponse(Version httpVersion, HttpHeaders httpHeaders, string? requestBody, byte[]? requestBodyBytes, HttpStatusCode httpStatusCode)
 {

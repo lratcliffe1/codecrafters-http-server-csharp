@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 
-namespace codecrafters_http_server.src;
+namespace codecrafters_http_server.src.Models;
 
 public class HttpRequest
 {

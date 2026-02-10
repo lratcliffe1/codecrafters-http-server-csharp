@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using codecrafters_http_server.src;
+using codecrafters_http_server.src.Models;
 
 const int Port = 4221;
 const int BufferSize = 1024;
