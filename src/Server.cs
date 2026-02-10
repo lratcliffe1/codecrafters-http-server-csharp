@@ -36,15 +36,54 @@ static void HandleClient(TcpClient client)
   while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) != 0)
   {
     requestBuilder.Append(Encoding.ASCII.GetString(buffer, 0, bytesRead));
-    var data = requestBuilder.ToString();
-    if (!data.Contains("\r\n\r\n"))
-      continue;
 
-    var httpRequest = new HttpRequest(data);
+    while (true)
+    {
+      var data = requestBuilder.ToString();
+      var requestLength = GetFirstRequestLength(data);
+      if (requestLength < 0)
+        break;
 
-    var responseBytes = ResponseParser.Parse(httpRequest).ToResponseBytes();
+      var requestData = data[..requestLength];
+      var httpRequest = new HttpRequest(requestData);
 
-    stream.Write(responseBytes, 0, responseBytes.Length);
-    stream.Flush();
+      var responseBytes = ResponseParser.Parse(httpRequest).ToResponseBytes();
+
+      stream.Write(responseBytes, 0, responseBytes.Length);
+      stream.Flush();
+
+      requestBuilder.Remove(0, requestLength);
+    }
   }
+}
+
+static int GetFirstRequestLength(string data)
+{
+  var headerEnd = data.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+  if (headerEnd < 0)
+    return -1;
+
+  var headersLength = headerEnd + 4; // include \r\n\r\n
+  var bodyStart = headersLength;
+
+  // Check for Content-Length to know total request size
+  var headers = data[..headerEnd];
+  const string contentLengthPrefix = "Content-Length:";
+  var clIdx = headers.IndexOf(contentLengthPrefix, StringComparison.OrdinalIgnoreCase);
+  if (clIdx >= 0)
+  {
+    var valueStart = clIdx + contentLengthPrefix.Length;
+    var valueEnd = headers.IndexOf('\r', valueStart);
+    if (valueEnd < 0) valueEnd = headers.Length;
+    var value = headers[valueStart..valueEnd].Trim();
+    if (int.TryParse(value, out var contentLength))
+    {
+      var totalLength = bodyStart + contentLength;
+      if (data.Length < totalLength)
+        return -1; // need more data
+      return totalLength;
+    }
+  }
+
+  return headersLength;
 }
