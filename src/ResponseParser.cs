@@ -41,14 +41,29 @@ public static class ResponseParser
         return new HttpResponse(request, HttpStatusCode.NotFound);
       }
 
-      try
+      if (request.HttpMethod == HttpMethod.Get)
       {
-        var fileContent = File.ReadAllText(fullPath);
-        return new HttpResponse(request.HttpVersion, CreateTextPlainHeaders(fileContent, "application/octet-stream"), fileContent, HttpStatusCode.OK);
+        try
+        {
+          var fileContent = File.ReadAllText(fullPath);
+          return new HttpResponse(request.HttpVersion, CreateTextPlainHeaders(fileContent, "application/octet-stream"), fileContent, HttpStatusCode.OK);
+        }
+        catch (FileNotFoundException)
+        {
+          return new HttpResponse(request, HttpStatusCode.NotFound);
+        }
       }
-      catch (FileNotFoundException)
+      else if (request.HttpMethod == HttpMethod.Post)
       {
-        return new HttpResponse(request, HttpStatusCode.NotFound);
+        try
+        {
+          File.WriteAllText(fullPath, request.RequestBody);
+          return new HttpResponse(request, HttpStatusCode.Created);
+        }
+        catch (Exception)
+        {
+          return new HttpResponse(request, HttpStatusCode.InternalServerError);
+        }
       }
     }
 
