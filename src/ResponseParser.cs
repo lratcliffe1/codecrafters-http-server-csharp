@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -33,7 +34,18 @@ public static class ResponseParser
   private static HttpResponse HandleEcho(HttpRequest request, string path)
   {
     var body = path[EchoPathPrefix.Length..];
-    var headers = CreateContentHeaders(body, "text/plain");
+    string? contentEncoding = null;
+
+    if (request.HttpHeaders.TryGetValues("Accept-Encoding", out var acceptEncoding))
+    {
+      if (acceptEncoding.Contains("gzip"))
+      {
+        body = GzipCompress(body);
+        contentEncoding = "gzip";
+      }
+    }
+    
+    var headers = CreateContentHeaders(body, "text/plain", contentEncoding);
     return new HttpResponse(request.HttpVersion, headers, body, HttpStatusCode.OK);
   }
 
@@ -75,7 +87,18 @@ public static class ResponseParser
     try
     {
       var fileContent = File.ReadAllText(fullPath);
-      var headers = CreateContentHeaders(fileContent, "application/octet-stream");
+      string? contentEncoding = null;
+
+      if (request.HttpHeaders.TryGetValues("Accept-Encoding", out var acceptEncoding))
+      {
+        if (acceptEncoding.Contains("gzip"))
+        {
+          fileContent = GzipCompress(fileContent);
+          contentEncoding = "gzip";
+        }
+      }
+
+      var headers = CreateContentHeaders(fileContent, "application/octet-stream", contentEncoding);
       return new HttpResponse(request.HttpVersion, headers, fileContent, HttpStatusCode.OK);
     }
     catch (FileNotFoundException)
@@ -97,12 +120,23 @@ public static class ResponseParser
     }
   }
 
-  private static HttpContentHeaders CreateContentHeaders(string body, string contentType)
+  private static HttpContentHeaders CreateContentHeaders(string body, string contentType, string? contentEncoding = null)
   {
     var headers = new ByteArrayContent([]).Headers;
     headers.Clear();
     headers.Add("Content-Type", contentType);
     headers.Add("Content-Length", Encoding.UTF8.GetByteCount(body).ToString());
+    if (contentEncoding != null)
+      headers.Add("Content-Encoding", contentEncoding);
     return headers;
   }
+
+  private static string GzipCompress(string fileContent)
+  {
+    using var memoryStream = new MemoryStream();
+    using var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress);
+    using var writer = new StreamWriter(gzipStream);
+    writer.Write(fileContent);
+    writer.Flush();
+    return Encoding.UTF8.GetString(memoryStream.ToArray());  }
 }
