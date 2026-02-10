@@ -35,18 +35,24 @@ public static class ResponseParser
   {
     var body = path[EchoPathPrefix.Length..];
     string? contentEncoding = null;
+    byte[]? bodyBytes = null;
 
     if (request.HttpHeaders.TryGetValues("Accept-Encoding", out var acceptEncoding))
     {
       if (acceptEncoding.Contains("gzip"))
       {
-        body = GzipCompress(body);
+        bodyBytes = GzipCompress(body);
         contentEncoding = "gzip";
       }
     }
-    
-    var headers = CreateContentHeaders(body, "text/plain", contentEncoding);
-    return new HttpResponse(request.HttpVersion, headers, body, HttpStatusCode.OK);
+
+    var headers = bodyBytes != null
+      ? CreateContentHeaders(bodyBytes, "text/plain", contentEncoding)
+      : CreateContentHeaders(body, "text/plain", contentEncoding);
+
+    return bodyBytes != null
+      ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)
+      : new HttpResponse(request.HttpVersion, headers, body, HttpStatusCode.OK);
   }
 
   private static HttpResponse HandleUserAgent(HttpRequest request)
@@ -88,18 +94,24 @@ public static class ResponseParser
     {
       var fileContent = File.ReadAllText(fullPath);
       string? contentEncoding = null;
+      byte[]? bodyBytes = null;
 
       if (request.HttpHeaders.TryGetValues("Accept-Encoding", out var acceptEncoding))
       {
         if (acceptEncoding.Contains("gzip"))
         {
-          fileContent = GzipCompress(fileContent);
+          bodyBytes = GzipCompress(fileContent);
           contentEncoding = "gzip";
         }
       }
 
-      var headers = CreateContentHeaders(fileContent, "application/octet-stream", contentEncoding);
-      return new HttpResponse(request.HttpVersion, headers, fileContent, HttpStatusCode.OK);
+      var headers = bodyBytes != null
+        ? CreateContentHeaders(bodyBytes, "application/octet-stream", contentEncoding)
+        : CreateContentHeaders(fileContent, "application/octet-stream", contentEncoding);
+
+      return bodyBytes != null
+        ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)
+        : new HttpResponse(request.HttpVersion, headers, fileContent, HttpStatusCode.OK);
     }
     catch (FileNotFoundException)
     {
@@ -131,12 +143,26 @@ public static class ResponseParser
     return headers;
   }
 
-  private static string GzipCompress(string fileContent)
+  private static HttpContentHeaders CreateContentHeaders(byte[] bodyBytes, string contentType, string? contentEncoding = null)
+  {
+    var headers = new ByteArrayContent([]).Headers;
+    headers.Clear();
+    headers.Add("Content-Type", contentType);
+    headers.Add("Content-Length", bodyBytes.Length.ToString());
+    if (contentEncoding != null)
+      headers.Add("Content-Encoding", contentEncoding);
+    return headers;
+  }
+
+  private static byte[] GzipCompress(string fileContent)
   {
     using var memoryStream = new MemoryStream();
-    using var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress);
-    using var writer = new StreamWriter(gzipStream);
-    writer.Write(fileContent);
-    writer.Flush();
-    return Encoding.UTF8.GetString(memoryStream.ToArray());  }
+    using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress, leaveOpen: true))
+    {
+      using var writer = new StreamWriter(gzipStream);
+      writer.Write(fileContent);
+      writer.Flush();
+    }
+    return memoryStream.ToArray();
+  }
 }

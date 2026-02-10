@@ -41,10 +41,9 @@ static void HandleClient(TcpClient client)
 
     var httpRequest = new HttpRequest(data);
 
-    var response = ResponseParser.Parse(httpRequest).ToResponseString();
+    var responseBytes = ResponseParser.Parse(httpRequest).ToResponseBytes();
 
-    var msg = Encoding.UTF8.GetBytes(response);
-    stream.Write(msg, 0, msg.Length);
+    stream.Write(responseBytes, 0, responseBytes.Length);
     stream.Flush();
     break;
   }
