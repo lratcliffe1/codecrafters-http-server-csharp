@@ -40,21 +40,12 @@ public static class FileHandler
     try
     {
       var fileContent = File.ReadAllText(fullPath);
-      string? contentEncoding = null;
-      byte[]? bodyBytes = null;
+      var (bodyBytes, contentEncoding) = ResponseHelper.TryCompressIfAccepted(fileContent, request.HttpHeaders);
 
-      if (request.HttpHeaders.TryGetValues("Accept-Encoding", out var acceptEncoding))
-      {
-        if (acceptEncoding.Contains("gzip"))
-        {
-          bodyBytes = ResponseHelper.GzipCompress(fileContent);
-          contentEncoding = "gzip";
-        }
-      }
-
+      const string contentType = "application/octet-stream";
       var headers = bodyBytes != null
-        ? ResponseHelper.CreateContentHeaders(bodyBytes, "application/octet-stream", contentEncoding)
-        : ResponseHelper.CreateContentHeaders(fileContent, "application/octet-stream", contentEncoding);
+        ? ResponseHelper.CreateContentHeaders(bodyBytes, contentType, contentEncoding)
+        : ResponseHelper.CreateContentHeaders(fileContent, contentType, contentEncoding);
 
       return bodyBytes != null
         ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)

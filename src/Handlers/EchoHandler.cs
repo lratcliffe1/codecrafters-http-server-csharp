@@ -7,25 +7,16 @@ namespace codecrafters_http_server.src.Handlers;
 public static class EchoHandler
 {
   private const string EchoPathPrefix = "/echo/";
+  private const string ContentType = "text/plain";
 
   public static HttpResponse Handle(HttpRequest request, string path)
   {
     var body = path[EchoPathPrefix.Length..];
-    string? contentEncoding = null;
-    byte[]? bodyBytes = null;
-
-    if (request.HttpHeaders.TryGetValues("Accept-Encoding", out var acceptEncoding))
-    {
-      if (acceptEncoding.Contains("gzip"))
-      {
-        bodyBytes = ResponseHelper.GzipCompress(body);
-        contentEncoding = "gzip";
-      }
-    }
+    var (bodyBytes, contentEncoding) = ResponseHelper.TryCompressIfAccepted(body, request.HttpHeaders);
 
     var headers = bodyBytes != null
-      ? ResponseHelper.CreateContentHeaders(bodyBytes, "text/plain", contentEncoding)
-      : ResponseHelper.CreateContentHeaders(body, "text/plain", contentEncoding);
+      ? ResponseHelper.CreateContentHeaders(bodyBytes, ContentType, contentEncoding)
+      : ResponseHelper.CreateContentHeaders(body, ContentType, contentEncoding);
 
     return bodyBytes != null
       ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)

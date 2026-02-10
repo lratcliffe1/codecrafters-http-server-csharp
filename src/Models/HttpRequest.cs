@@ -4,6 +4,12 @@ namespace codecrafters_http_server.src.Models;
 
 public class HttpRequest
 {
+  private const string HeaderBodySeparator = "\r\n\r\n";
+  private const string HeaderLineSeparator = "\r\n";
+  private const string HeaderValueSeparator = ": ";
+  private const string HttpVersionPrefix = "HTTP/";
+  private const string DefaultHttpVersion = "1.1";
+
   public HttpMethod HttpMethod { get; init; }
   public string HttpTarget { get; init; }
   public Version HttpVersion { get; init; }
@@ -15,11 +21,11 @@ public class HttpRequest
     if (string.IsNullOrWhiteSpace(request))
       throw new ArgumentException("Request cannot be empty.", nameof(request));
 
-    var headAndBody = request.Split("\r\n\r\n", 2, StringSplitOptions.None);
+    var headAndBody = request.Split(HeaderBodySeparator, 2, StringSplitOptions.None);
     var head = headAndBody[0];
     var body = headAndBody.Length > 1 ? headAndBody[1] : "";
 
-    var requestLines = head.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+    var requestLines = head.Split(HeaderLineSeparator, StringSplitOptions.RemoveEmptyEntries);
     if (requestLines.Length == 0)
       throw new ArgumentException("Invalid request: missing request line.", nameof(request));
 
@@ -29,7 +35,10 @@ public class HttpRequest
 
     var method = requestLineParts[0];
     var target = requestLineParts[1];
-    var version = requestLineParts[2].Split('/').LastOrDefault() ?? "1.1";
+    var versionString = requestLineParts[2];
+    var version = versionString.StartsWith(HttpVersionPrefix, StringComparison.OrdinalIgnoreCase)
+      ? versionString[HttpVersionPrefix.Length..]
+      : versionString.Split('/').LastOrDefault() ?? DefaultHttpVersion;
 
     HttpMethod = GetHttpMethod(method);
     HttpTarget = target;
@@ -62,9 +71,13 @@ public class HttpRequest
     for (var i = 1; i < requestLines.Length; i++)
     {
       var line = requestLines[i];
-      var colon = line.IndexOf(": ", StringComparison.Ordinal);
-      if (colon > 0)
-        headers.TryAddWithoutValidation(line[..colon], line[(colon + 2)..]);
+      var colonIndex = line.IndexOf(HeaderValueSeparator, StringComparison.Ordinal);
+      if (colonIndex > 0)
+      {
+        var headerName = line[..colonIndex];
+        var headerValue = line[(colonIndex + HeaderValueSeparator.Length)..];
+        headers.TryAddWithoutValidation(headerName, headerValue);
+      }
     }
 
     return headers;

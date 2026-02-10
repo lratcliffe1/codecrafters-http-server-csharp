@@ -15,7 +15,7 @@ public static class ResponseParser
   private const string RootPath = "/";
   private const string EchoPathPrefix = "/echo/";
   private const string UserAgentPath = "/user-agent";
-  private const string RequestedFilePath = "/files/";
+  private const string FilesPathPrefix = "/files/";
 
   public static HttpResponse Parse(HttpRequest request)
   {
@@ -24,7 +24,7 @@ public static class ResponseParser
       RootPath => RootHandler.Handle(request),
       var path when path.StartsWith(EchoPathPrefix, StringComparison.Ordinal) => EchoHandler.Handle(request, path),
       var path when path.StartsWith(UserAgentPath, StringComparison.Ordinal) => UserAgentHandler.Handle(request),
-      var path when path.StartsWith(RequestedFilePath, StringComparison.Ordinal) => FileHandler.Handle(request, path),
+      var path when path.StartsWith(FilesPathPrefix, StringComparison.Ordinal) => FileHandler.Handle(request, path),
       _ => new HttpResponse(request, HttpStatusCode.NotFound)
     };
   }
