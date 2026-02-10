@@ -20,6 +20,17 @@ public class HttpResponse(Version httpVersion, HttpHeaders httpHeaders, string? 
 
   public byte[] ToResponseBytes()
   {
+    Console.WriteLine(HttpHeaders.ToString());
+    Console.WriteLine(RequestBodyBytes);
+    Console.WriteLine(RequestBody);
+    Console.WriteLine(HttpStatusCode);
+    Console.WriteLine(HttpVersion);
+    Console.WriteLine(HttpHeaders.ToString());
+    Console.WriteLine(RequestBodyBytes);
+    Console.WriteLine(RequestBody);
+    Console.WriteLine(HttpStatusCode);
+    Console.WriteLine(HttpVersion);
+    
     var headerLines = string.Join("\r\n", HttpHeaders.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"));
     var reasonPhrase = GetReasonPhrase(HttpStatusCode);
     var headerString = $"HTTP/{HttpVersion} {(int)HttpStatusCode} {reasonPhrase}\r\n{headerLines}\r\n\r\n";

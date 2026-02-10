@@ -46,6 +46,5 @@ static void HandleClient(TcpClient client)
 
     stream.Write(responseBytes, 0, responseBytes.Length);
     stream.Flush();
-    break;
   }
 }
