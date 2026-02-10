@@ -1,31 +1,45 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using codecrafters_http_server.src;
 
-TcpListener server = new(IPAddress.Any, 4221);
+const int Port = 4221;
+const int BufferSize = 1024;
+
+var server = new TcpListener(IPAddress.Any, Port);
 server.Start();
 
 while (true)
 {
-  TcpClient client = server.AcceptTcpClient();
-  Thread clientThread = new(() => HandleClient(client));
+  var client = server.AcceptTcpClient();
+  var clientThread = new Thread(() => HandleClient(client));
   clientThread.Start();
 }
 
 static void HandleClient(TcpClient client)
 {
-  using TcpClient _ = client;
-  byte[] bytes = new byte[256];
-  string? data = null;
-  NetworkStream stream = client.GetStream();
+  using var _ = client;
+  using var stream = client.GetStream();
+  var buffer = new byte[BufferSize];
+  var requestBuilder = new StringBuilder();
 
-  int i;
-  while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+  int bytesRead;
+  while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) != 0)
   {
-    data = Encoding.ASCII.GetString(bytes, 0, i);
+    requestBuilder.Append(Encoding.ASCII.GetString(buffer, 0, bytesRead));
+    var data = requestBuilder.ToString();
+    if (!data.Contains("\r\n\r\n"))
+      continue;
 
-    byte[] msg = Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\n\r\n");
+    var httpRequest = RequestParser.Parse(data);
+
+    var response = httpRequest.HttpTarget == "/"
+      ? "HTTP/1.1 200 OK\r\n\r\n"
+      : "HTTP/1.1 404 Not Found\r\n\r\n";
+
+    var msg = Encoding.UTF8.GetBytes(response);
     stream.Write(msg, 0, msg.Length);
     stream.Flush();
+    break;
   }
 }
