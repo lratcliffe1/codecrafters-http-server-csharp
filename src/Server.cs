@@ -33,9 +33,7 @@ static void HandleClient(TcpClient client)
 
     var httpRequest = RequestParser.Parse(data);
 
-    var response = httpRequest.HttpTarget == "/"
-      ? "HTTP/1.1 200 OK\r\n\r\n"
-      : "HTTP/1.1 404 Not Found\r\n\r\n";
+    var response = ResponseParser.Parse(httpRequest).ToResponseString();
 
     var msg = Encoding.UTF8.GetBytes(response);
     stream.Write(msg, 0, msg.Length);
