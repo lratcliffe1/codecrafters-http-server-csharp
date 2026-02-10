@@ -31,7 +31,7 @@ static void HandleClient(TcpClient client)
     if (!data.Contains("\r\n\r\n"))
       continue;
 
-    var httpRequest = RequestParser.Parse(data);
+    var httpRequest = new HttpRequest(data);
 
     var response = ResponseParser.Parse(httpRequest).ToResponseString();
 
