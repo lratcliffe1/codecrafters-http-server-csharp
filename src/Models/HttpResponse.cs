@@ -4,7 +4,7 @@ using System.Text;
 
 namespace codecrafters_http_server.src.Models;
 
-public class HttpResponse(Version httpVersion, HttpHeaders httpHeaders, string? requestBody, byte[]? requestBodyBytes, HttpStatusCode httpStatusCode)
+public class HttpResponse(Version httpVersion, HttpHeaders httpHeaders, HttpStatusCode httpStatusCode, string? requestBody = null, byte[]? requestBodyBytes = null)
 {
   public Version HttpVersion { get; init; } = httpVersion;
   public HttpStatusCode HttpStatusCode { get; init; } = httpStatusCode;
@@ -12,11 +12,8 @@ public class HttpResponse(Version httpVersion, HttpHeaders httpHeaders, string? 
   public string? RequestBody { get; init; } = requestBody;
   public byte[]? RequestBodyBytes { get; init; } = requestBodyBytes;
 
-  public HttpResponse(Version httpVersion, HttpHeaders httpHeaders, string requestBody, HttpStatusCode httpStatusCode)
-    : this(httpVersion, httpHeaders, requestBody, null, httpStatusCode) { }
-
   public HttpResponse(HttpRequest request, HttpStatusCode httpStatusCode)
-    : this(request.HttpVersion, request.HttpHeaders, request.RequestBody, null, httpStatusCode) { }
+    : this(request.HttpVersion, request.HttpHeaders, httpStatusCode, request.RequestBody) { }
 
   public byte[] ToResponseBytes()
   {

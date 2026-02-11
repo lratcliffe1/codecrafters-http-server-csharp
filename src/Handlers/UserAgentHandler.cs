@@ -1,15 +1,18 @@
 using System.Net;
-using codecrafters_http_server.src.Helpers;
+using codecrafters_http_server.src.Constants;
 using codecrafters_http_server.src.Models;
+using codecrafters_http_server.src.Services;
 
 namespace codecrafters_http_server.src.Handlers;
 
-public static class UserAgentHandler
+public class UserAgentHandler(IResponseHeaderBuilder headerBuilder) : IHandler
 {
-  public static HttpResponse Handle(HttpRequest request)
+  private readonly IResponseHeaderBuilder _headerBuilder = headerBuilder;
+
+  public HttpResponse Handle(HttpRequest request, string path)
   {
-    var userAgent = request.HttpHeaders.GetValues("User-Agent").FirstOrDefault() ?? "";
-    var headers = ResponseHelper.CreateContentHeaders(userAgent, "text/plain", request.HttpHeaders, null);
-    return new HttpResponse(request.HttpVersion, headers, userAgent, HttpStatusCode.OK);
+    var userAgent = request.HttpHeaders.GetValues(HttpConstants.HttpHeaderNames.UserAgent).FirstOrDefault() ?? "";
+    var headers = _headerBuilder.BuildContentHeaders(userAgent, HttpConstants.ContentTypes.TextPlain, request.HttpHeaders);
+    return new HttpResponse(request.HttpVersion, headers, HttpStatusCode.OK, userAgent);
   }
 }

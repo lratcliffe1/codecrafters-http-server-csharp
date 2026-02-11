@@ -1,17 +1,21 @@
 using System.Net;
-using codecrafters_http_server.src.Helpers;
+using codecrafters_http_server.src.Configuration;
+using codecrafters_http_server.src.Constants;
 using codecrafters_http_server.src.Models;
+using codecrafters_http_server.src.Routing;
+using codecrafters_http_server.src.Services;
 
 namespace codecrafters_http_server.src.Handlers;
 
-public static class FileHandler
+public class FileHandler(IFileConfiguration fileConfiguration, IResponseHeaderBuilder headerBuilder, ICompressionService compressionService) : IHandler
 {
-  private const string RequestedFilePath = "/files/";
-  public static string? FilesDirectory { get; set; }
+  private readonly IFileConfiguration _fileConfiguration = fileConfiguration;
+  private readonly IResponseHeaderBuilder _headerBuilder = headerBuilder;
+  private readonly ICompressionService _compressionService = compressionService;
 
-  public static HttpResponse Handle(HttpRequest request, string path)
+  public HttpResponse Handle(HttpRequest request, string path)
   {
-    var fileName = path[RequestedFilePath.Length..];
+    var fileName = path[RouteConstants.FilesPathPrefix.Length..];
     var fullPath = ResolveFilePath(fileName);
 
     if (fullPath == null)
@@ -26,30 +30,29 @@ public static class FileHandler
     return new HttpResponse(request, HttpStatusCode.NotFound);
   }
 
-  private static string? ResolveFilePath(string fileName)
+  private string? ResolveFilePath(string fileName)
   {
-    var baseDir = FilesDirectory ?? Directory.GetCurrentDirectory();
+    var baseDir = _fileConfiguration.FilesDirectory;
     var fullPath = Path.GetFullPath(Path.Combine(baseDir, fileName));
     var baseFull = Path.GetFullPath(baseDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
     return fullPath.StartsWith(baseFull, StringComparison.Ordinal) ? fullPath : null;
   }
 
-  private static HttpResponse HandleFileGet(HttpRequest request, string fullPath)
+  private HttpResponse HandleFileGet(HttpRequest request, string fullPath)
   {
     try
     {
       var fileContent = File.ReadAllText(fullPath);
-      var (bodyBytes, contentEncoding) = ResponseHelper.TryCompressIfAccepted(fileContent, request.HttpHeaders);
+      var (bodyBytes, contentEncoding) = _compressionService.TryCompressIfAccepted(fileContent, request.HttpHeaders);
 
-      const string contentType = "application/octet-stream";
       var headers = bodyBytes != null
-        ? ResponseHelper.CreateContentHeaders(bodyBytes, contentType, request.HttpHeaders, contentEncoding)
-        : ResponseHelper.CreateContentHeaders(fileContent, contentType, request.HttpHeaders, contentEncoding);
+        ? _headerBuilder.BuildContentHeaders(bodyBytes, HttpConstants.ContentTypes.ApplicationOctetStream, request.HttpHeaders, contentEncoding)
+        : _headerBuilder.BuildContentHeaders(fileContent, HttpConstants.ContentTypes.ApplicationOctetStream, request.HttpHeaders, contentEncoding);
 
       return bodyBytes != null
-        ? new HttpResponse(request.HttpVersion, headers, null, bodyBytes, HttpStatusCode.OK)
-        : new HttpResponse(request.HttpVersion, headers, fileContent, HttpStatusCode.OK);
+        ? new HttpResponse(request.HttpVersion, headers, HttpStatusCode.OK, requestBodyBytes: bodyBytes)
+        : new HttpResponse(request.HttpVersion, headers, HttpStatusCode.OK, requestBody: fileContent);
     }
     catch (FileNotFoundException)
     {

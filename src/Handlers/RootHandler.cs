@@ -3,9 +3,9 @@ using codecrafters_http_server.src.Models;
 
 namespace codecrafters_http_server.src.Handlers;
 
-public static class RootHandler
+public class RootHandler : IHandler
 {
-  public static HttpResponse Handle(HttpRequest request)
+  public HttpResponse Handle(HttpRequest request, string path)
   {
     return new HttpResponse(request, HttpStatusCode.OK);
   }

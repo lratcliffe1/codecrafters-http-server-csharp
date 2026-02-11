@@ -1,15 +1,10 @@
 using System.Net.Http.Headers;
+using codecrafters_http_server.src.Constants;
 
 namespace codecrafters_http_server.src.Models;
 
 public class HttpRequest
 {
-  private const string HeaderBodySeparator = "\r\n\r\n";
-  private const string HeaderLineSeparator = "\r\n";
-  private const string HeaderValueSeparator = ": ";
-  private const string HttpVersionPrefix = "HTTP/";
-  private const string DefaultHttpVersion = "1.1";
-
   public HttpMethod HttpMethod { get; init; }
   public string HttpTarget { get; init; }
   public Version HttpVersion { get; init; }
@@ -19,26 +14,26 @@ public class HttpRequest
   public HttpRequest(string request)
   {
     if (string.IsNullOrWhiteSpace(request))
-      throw new ArgumentException("Request cannot be empty.", nameof(request));
+      throw new ArgumentException(HttpConstants.ErrorMessages.RequestCannotBeEmpty, nameof(request));
 
-    var headAndBody = request.Split(HeaderBodySeparator, 2, StringSplitOptions.None);
+    var headAndBody = request.Split(HttpConstants.HttpProtocol.HeaderBodySeparator, 2, StringSplitOptions.None);
     var head = headAndBody[0];
     var body = headAndBody.Length > 1 ? headAndBody[1] : "";
 
-    var requestLines = head.Split(HeaderLineSeparator, StringSplitOptions.RemoveEmptyEntries);
+    var requestLines = head.Split(HttpConstants.HttpProtocol.HeaderLineSeparator, StringSplitOptions.RemoveEmptyEntries);
     if (requestLines.Length == 0)
-      throw new ArgumentException("Invalid request: missing request line.", nameof(request));
+      throw new ArgumentException(HttpConstants.ErrorMessages.InvalidRequestMissingRequestLine, nameof(request));
 
     var requestLineParts = requestLines[0].Split(' ', 3);
     if (requestLineParts.Length < 3)
-      throw new ArgumentException("Invalid request line: expected 'METHOD TARGET VERSION'.", nameof(request));
+      throw new ArgumentException(HttpConstants.ErrorMessages.InvalidRequestLine, nameof(request));
 
     var method = requestLineParts[0];
     var target = requestLineParts[1];
     var versionString = requestLineParts[2];
-    var version = versionString.StartsWith(HttpVersionPrefix, StringComparison.OrdinalIgnoreCase)
-      ? versionString[HttpVersionPrefix.Length..]
-      : versionString.Split('/').LastOrDefault() ?? DefaultHttpVersion;
+    var version = versionString.StartsWith(HttpConstants.HttpProtocol.HttpVersionPrefix, StringComparison.OrdinalIgnoreCase)
+      ? versionString[HttpConstants.HttpProtocol.HttpVersionPrefix.Length..]
+      : versionString.Split('/').LastOrDefault() ?? HttpConstants.HttpProtocol.DefaultHttpVersion;
 
     HttpMethod = GetHttpMethod(method);
     HttpTarget = target;
@@ -51,11 +46,11 @@ public class HttpRequest
   {
     return method switch
     {
-      "GET" => HttpMethod.Get,
-      "POST" => HttpMethod.Post,
-      "PUT" => HttpMethod.Put,
-      "DELETE" => HttpMethod.Delete,
-      "PATCH" => HttpMethod.Patch,
+      HttpConstants.HttpMethods.Get => HttpMethod.Get,
+      HttpConstants.HttpMethods.Post => HttpMethod.Post,
+      HttpConstants.HttpMethods.Put => HttpMethod.Put,
+      HttpConstants.HttpMethods.Delete => HttpMethod.Delete,
+      HttpConstants.HttpMethods.Patch => HttpMethod.Patch,
       _ => throw new NotImplementedException($"Unsupported HTTP method: {method}"),
     };
   }
@@ -71,11 +66,11 @@ public class HttpRequest
     for (var i = 1; i < requestLines.Length; i++)
     {
       var line = requestLines[i];
-      var colonIndex = line.IndexOf(HeaderValueSeparator, StringComparison.Ordinal);
+      var colonIndex = line.IndexOf(HttpConstants.HttpProtocol.HeaderValueSeparator, StringComparison.Ordinal);
       if (colonIndex > 0)
       {
         var headerName = line[..colonIndex];
-        var headerValue = line[(colonIndex + HeaderValueSeparator.Length)..];
+        var headerValue = line[(colonIndex + HttpConstants.HttpProtocol.HeaderValueSeparator.Length)..];
         headers.TryAddWithoutValidation(headerName, headerValue);
       }
     }
