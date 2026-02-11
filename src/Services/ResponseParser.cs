@@ -26,6 +26,7 @@ public class ResponseParser(
       return new HttpResponse(request, HttpStatusCode.NotFound);
 
     var handler = _serviceProvider.GetKeyedService<IHandler>(handlerKey);
+
     return handler?.Handle(request, request.HttpTarget) ?? new HttpResponse(request, HttpStatusCode.NotFound);
   }
 }

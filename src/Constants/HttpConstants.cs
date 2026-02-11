@@ -16,6 +16,9 @@ public static class HttpConstants
   {
     public const string ConnectionClose = "close";
     public const string GzipEncoding = "gzip";
+    public const string DeflateEncoding = "deflate";
+    public const string BrotliEncoding = "br";
+    public const string ZstandardEncoding = "zstd";
   }
 
   public static class ContentTypes

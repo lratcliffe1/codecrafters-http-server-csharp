@@ -38,7 +38,6 @@ public class ServerBuilder
 
     // Register scoped services (one per client connection)
     builder.Services.AddScoped<IRequestReader, RequestReader>();
-    builder.Services.AddScoped<IErrorResponseFactory, ErrorResponseFactory>();
     builder.Services.AddScoped<IResponseParser, ResponseParser>();
     builder.Services.AddScoped<IClientConnectionHandler, ClientConnectionHandler>();
 

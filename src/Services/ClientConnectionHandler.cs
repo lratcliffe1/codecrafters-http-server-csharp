@@ -1,5 +1,8 @@
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using codecrafters_http_server.src.Constants;
+using codecrafters_http_server.src.Models;
 
 namespace codecrafters_http_server.src.Services;
 
@@ -8,11 +11,10 @@ public interface IClientConnectionHandler
   void HandleClient(TcpClient client);
 }
 
-public class ClientConnectionHandler(IResponseParser responseParser, IRequestReader requestReader, IErrorResponseFactory errorResponseFactory) : IClientConnectionHandler
+public class ClientConnectionHandler(IResponseParser responseParser, IRequestReader requestReader) : IClientConnectionHandler
 {
   private readonly IResponseParser _responseParser = responseParser;
   private readonly IRequestReader _requestReader = requestReader;
-  private readonly IErrorResponseFactory _errorResponseFactory = errorResponseFactory;
 
   public void HandleClient(TcpClient client)
   {
@@ -47,17 +49,7 @@ public class ClientConnectionHandler(IResponseParser responseParser, IRequestRea
         }
         catch (Exception ex)
         {
-          Console.Error.WriteLine($"Error processing request: {ex.Message}");
-          try
-          {
-            var errorBytes = _errorResponseFactory.CreateBadRequestResponseBytes();
-            stream.Write(errorBytes, 0, errorBytes.Length);
-            stream.Flush();
-          }
-          catch (Exception writeEx)
-          {
-            Console.Error.WriteLine($"Failed to send error response: {writeEx.Message}");
-          }
+          SendErrorResponse(stream, ex);
           break;
         }
       }
@@ -65,6 +57,24 @@ public class ClientConnectionHandler(IResponseParser responseParser, IRequestRea
     catch (Exception ex)
     {
       Console.Error.WriteLine($"Error handling client: {ex.Message}");
+    }
+  }
+
+  private static void SendErrorResponse(NetworkStream stream, Exception ex)
+  {
+    Console.Error.WriteLine($"Error processing request: {ex.Message}");
+    try
+    {
+      var responseMessage = new HttpResponseMessage();
+      var headers = responseMessage.Headers;
+      var errorResponse = new HttpResponse(new Version(1, 1), headers, HttpStatusCode.BadRequest, HttpConstants.ErrorMessages.BadRequestMessage);
+      var errorBytes = errorResponse.ToResponseBytes();
+      stream.Write(errorBytes, 0, errorBytes.Length);
+      stream.Flush();
+    }
+    catch (Exception writeEx)
+    {
+      Console.Error.WriteLine($"Failed to send error response: {writeEx.Message}");
     }
   }
 }
